@@ -12,6 +12,7 @@ class govDataset:
 
     def __init__(self, dataURL:str):
         self.dataURL = dataURL
+        self.title = {}
         self.url = {}
 
         self._connected = 0
@@ -41,35 +42,47 @@ class govDataset:
         lang='en'
         """
         self.mode = mode
+        self.lang = lang
         if (self._connected):
-            self._htmlTagToKeep = ['a']
-            self._allTitle = self.html_soup.findAll(self._htmlTagToKeep, class_='dataset-details__list-item-download')
+            self._htmlTagToKeep = ['a', 'div']
+            self._allTitle = self.html_soup.findAll(self._htmlTagToKeep, class_='dataset-details__list-item-name')
             self._allaTags = self.html_soup.findAll(self._htmlTagToKeep, class_='dataset-details__list-item-download')
             
-            for i, title in enumerate(self._allTitle):
-                self.url[i] = title
+            for i, TITLE in enumerate(self._allTitle):
+                self.title[i] = TITLE.text
+            for i, URL in enumerate(self._allaTags):
+                self.url[i] = URL.get('href')
 
-            self.df['Title'] = self.url
+            self.df['Title'] = self.title
+            self.df['URL'] = self.url
+            self.save()
             # PROGRESS
             
 
-            self.save(lang)
-
     def save(self):
+        self.df['isZH']={}
+        for i, tt in enumerate(self.df['Title']):
+            self.df['Title'].loc[i] = re.sub(r'/', '-', re.sub(r'\n', '', re.sub(r' ', '', tt)) )
+            self.df['isZH'].loc[i] = (re.findall('繁', tt))
+
+            if (self.lang == 'zh'):
+                self.df= self.df[self.df['isZH'].str.len()!=0]
+            else:
+                self.df= self.df[self.df['isZH'].str.len()==0]
+        
+        display(self.df)
         if self.mode=='dataframe':
             display(self.df);
         if self.mode=='print':
-            for tag in self._allaTags:
-                print(tag.get('href'))
+            print(self.df['URL'])
 
         if self.mode=='txt':
             self.f = open('csvList.txt', 'w')
-            for tag in self._allaTags:
-                self.f.write(tag.get('href')+'\n')
+            for (tt, url, isZH) in self.df:
+                self.f.write({url}+'\n')
             self.f.close()
 
         if self.mode == 'csv':
-            for tag in self._allaTags:
-                local_filename, headers = urllib.request.urlretrieve('tag')
-                urllib.request.urlretrieve(re.findall(r'ss[0-9]{4}.*',local_filename, f'{local_filename}.csv'))
+            for (tt, url) in self.df:
+                urllib.request.urlretrieve(url, f'{title}.csv')
             self.f.close()
