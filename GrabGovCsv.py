@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup as soup
 from dataclasses import dataclass
 import re
 from IPython.display import display
-
+import os
 
 class govDataset:
     hdr = {'User-Agent':'Mozilla/5.0', 'Accept': 'text/html, application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}
@@ -65,24 +65,29 @@ class govDataset:
             self.df['Title'].loc[i] = re.sub(r'/', '-', re.sub(r'\n', '', re.sub(r' ', '', tt)) )
             self.df['isZH'].loc[i] = (re.findall('繁', tt))
 
-            if (self.lang == 'zh'):
-                self.df= self.df[self.df['isZH'].str.len()!=0]
-            else:
-                self.df= self.df[self.df['isZH'].str.len()==0]
+        if (self.lang == 'zh'):
+            self.df= self.df[self.df['isZH'].str.len()!=0]
+        else:
+            self.df= self.df[self.df['isZH'].str.len()==0]
         
-        display(self.df)
         if self.mode=='dataframe':
             display(self.df);
         if self.mode=='print':
             print(self.df['URL'])
 
         if self.mode=='txt':
-            self.f = open('csvList.txt', 'w')
-            for (tt, url, isZH) in self.df:
-                self.f.write({url}+'\n')
-            self.f.close()
+            f = open('csvList.txt', 'w')
+            for i in self.df['URL']:
+                f.write(f"{i}+'\n'")
+            f.close()
+
+        for i in f'/csv/{tt[i]}.csv':
+            if not os.path.isdir(i):
+                os.makedirs(i)
 
         if self.mode == 'csv':
-            for (tt, url) in self.df:
-                urllib.request.urlretrieve(url, f'{title}.csv')
-            self.f.close()
+            tt, url = self.df['Title'], self.df['URL']
+            for i in self.df.reset_index(drop=True).index:
+                self.fildir = f'/csv/{tt[i]}.csv'
+                urllib.request.urlretrieve(url[i], self.fildir)
+
